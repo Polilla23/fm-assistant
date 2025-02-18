@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>HTML Parser</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+      }
+      input,
+      button {
+        font-size: 1rem;
+        padding: 5px;
+        margin: 5px;
+      }
+      #result {
+        margin-top: 20px;
+        white-space: pre-wrap; /* para respetar los saltos de línea */
+        background: #f0f0f0;
+        padding: 10px;
+        border: 1px solid #ccc;
+      }
+      ul {
+        padding-left: 20px; /* Opcional: puedes ajustar este valor */
+      }
+
+      ul li {
+        margin: 0; /* Elimina el margen por defecto */
+        padding: 5px 0; /* Reduce el padding entre los elementos */
+      }
+    </style>
+  </head>
+  <body>
+    <h1>HTML Parser</h1>
+    <input type="file" id="fileInput" accept=".html" />
+    <button id="parseBtn">Convert to array</button>
+
+    <!-- Div para mostrar el resultado -->
+    <div id="result"></div>
+
+    <script src="roleNames.js"></script>
+
+    <script src="stats.js"></script>
+
+    <script>
+      document
+        .getElementById("parseBtn")
+        .addEventListener("click", function () {
+          const fileInput = document.getElementById("fileInput");
+          if (!fileInput.files || fileInput.files.length === 0) {
+            alert("Select an HTML file");
+            return;
+          }
+          const file = fileInput.files[0];
+          const reader = new FileReader();
+          reader.onload = function (e) {
+            const htmlContent = e.target.result;
+            // Convert string to an HTML document
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(htmlContent, "text/html");
+
+            // Find the first table in the document
+            const table = doc.querySelector("table");
+            if (!table) {
+              alert("No table inside the file");
+              return;
+            }
+
+            // Get the table headers (assuming they are in the first row)
+            const headerCells = table.querySelectorAll("tr:first-of-type th");
+            let headers = [];
+            headerCells.forEach((cell) => {
+              headers.push(cell.textContent.trim());
+            });
+
+            // Loop through the remaining rows to create an array of objects
+            let data = [];
+            const rows = table.querySelectorAll("tr");
+            rows.forEach((row, index) => {
+              // Skip the first row (headers)
+              if (index === 0) return;
+
+              const cells = row.querySelectorAll("td");
+              // If the row has no cells, skip it
+              if (cells.length === 0) return;
+              let rowData = {};
+              cells.forEach((cell, i) => {
+                // If there are more cells than headers, assign a generic name
+                let header = headers[i] || "column_" + i;
+                rowData[header] = cell.textContent.trim();
+              });
+              data.push(rowData);
+            });
+
+            // console.log(data);
+            // Mostrar el array en el div 'result'
+            document.getElementById("result").textContent = JSON.stringify(
+              data,
+              null,
+              2
+            );
+            alert("Work done, check the browser console or the result div.");
+
+            getBestRoles(data);
+            // console.log(window.roles)
+            // console.log(getBestRoles(data))
+          };
+
+          reader.onerror = function () {
+            alert("Error reading file.");
+          };
+
+          // Read the file as text
+          reader.readAsText(file);
+        });
+
+      function getBestRoles(data) {
+        if (typeof roles === "undefined" || roles.length === 0) {
+          console.error(
+            "El archivo stats.js no se ha cargado correctamente o los roles están vacíos."
+          );
+          return;
+        }
+
+        let resultDiv = document.getElementById("result");
+        resultDiv.innerHTML = "";
+
+        data.forEach((player) => {
+          let points = roles.map((role) => {
+            let total = Object.keys(role.attributes).reduce((sum, attr) => {
+              return (
+                sum + (parseInt(player[attr]) || 0) * role.attributes[attr]
+              );
+            }, 0);
+            return { id: role.id, total };
+          });
+
+          points.sort((a, b) => b.total - a.total);
+          let bestRoles = points.slice(0, 5);
+
+          let playerInfo = `<h3>${player.Name}</h3>
+          <p><strong>Position:</strong> ${player.Position}</p>
+          <p><strong>Height:</strong> ${player.Height}</p>
+          <p><strong>Weight:</strong> ${player.Weight}</p>
+          <p><strong>Age:</strong> ${player.Age}</p>
+          <p><strong>Personality:</strong> ${player.Personality}</p>
+          <p><strong>Nationality:</strong> ${player.NoB}</p>
+          <p><strong>Left Foot:</strong> ${player["Left Foot"]}</p>
+          <p><strong>Right Foot:</strong> ${player["Right Foot"]}</p>
+          <p><strong>Mejores 5 roles:</strong></p><ul>`;
+
+          bestRoles.forEach((role) => {
+            let roleName = window.roleNames[role.id] || "Unknown Role";
+            playerInfo += `<li>${roleName}: ${role.total}</li>`;
+          });
+
+          playerInfo += "</ul>";
+          resultDiv.innerHTML += playerInfo;
+        });
+      }
+    </script>
+  </body>
+</html>
