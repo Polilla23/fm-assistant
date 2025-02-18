@@ -16,18 +16,36 @@
       }
       #result {
         margin-top: 20px;
-        white-space: pre-wrap; /* para respetar los saltos de línea */
         background: #f0f0f0;
         padding: 10px;
         border: 1px solid #ccc;
+        overflow-x: auto;
       }
-      ul {
-        padding-left: 20px; /* Opcional: puedes ajustar este valor */
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
       }
-
-      ul li {
-        margin: 0; /* Elimina el margen por defecto */
-        padding: 5px 0; /* Reduce el padding entre los elementos */
+      th,
+      td {
+        border: 1px solid #ccc;
+        padding: 8px;
+        text-align: left;
+      }
+      th {
+        background-color: #e0e0e0;
+      }
+      .role-dropdown {
+        cursor: pointer;
+        color: blue;
+        text-decoration: underline;
+        margin-left: 5px;
+      }
+      .hidden-roles {
+        display: none;
+        font-size: 0.9em;
+        margin-top: 5px;
+        color: #555;
       }
     </style>
   </head>
@@ -126,7 +144,42 @@
         let resultDiv = document.getElementById("result");
         resultDiv.innerHTML = "";
 
+        let table = document.createElement("table");
+
+        // Crear la fila de encabezados
+        let thead = document.createElement("thead");
+        let headerRow = document.createElement("tr");
+
+        let headers = Object.keys(data[0]); // Obtener los nombres de los atributos
+
+        headers.forEach((header) => {
+          let th = document.createElement("th");
+          th.textContent = header;
+          headerRow.appendChild(th);
+        });
+
+        // Agregar columna "Mejores 5 roles"
+        let roleHeader = document.createElement("th");
+        roleHeader.textContent = "Mejores 5 roles";
+        headerRow.appendChild(roleHeader);
+
+        thead.appendChild(headerRow);
+        table.appendChild(thead);
+
+        // Crear el cuerpo de la tabla
+        let tbody = document.createElement("tbody");
+
         data.forEach((player) => {
+          let row = document.createElement("tr");
+
+          // Llenar los datos del jugador en la fila
+          headers.forEach((header) => {
+            let td = document.createElement("td");
+            td.textContent = player[header] || "";
+            row.appendChild(td);
+          });
+
+          // Calcular los mejores 5 roles
           let points = roles.map((role) => {
             let total = Object.keys(role.attributes).reduce((sum, attr) => {
               return (
@@ -139,25 +192,41 @@
           points.sort((a, b) => b.total - a.total);
           let bestRoles = points.slice(0, 5);
 
-          let playerInfo = `<h3>${player.Name}</h3>
-          <p><strong>Position:</strong> ${player.Position}</p>
-          <p><strong>Height:</strong> ${player.Height}</p>
-          <p><strong>Weight:</strong> ${player.Weight}</p>
-          <p><strong>Age:</strong> ${player.Age}</p>
-          <p><strong>Personality:</strong> ${player.Personality}</p>
-          <p><strong>Nationality:</strong> ${player.NoB}</p>
-          <p><strong>Left Foot:</strong> ${player["Left Foot"]}</p>
-          <p><strong>Right Foot:</strong> ${player["Right Foot"]}</p>
-          <p><strong>Mejores 5 roles:</strong></p><ul>`;
+          let bestRole = bestRoles[0];
+          let bestRoleName = roleNames[bestRole.id] || "Unknown Role";
 
-          bestRoles.forEach((role) => {
-            let roleName = window.roleNames[role.id] || "Unknown Role";
-            playerInfo += `<li>${roleName}: ${role.total}</li>`;
+          // Agregar los roles en una celda
+          let rolesTd = document.createElement("td");
+
+          let roleSpan = document.createElement("span");
+          roleSpan.textContent = `${bestRoleName} (${bestRole.total})`;
+          
+          let dropdown = document.createElement("span");
+          dropdown.textContent = " ▼";
+          dropdown.classList.add("role-dropdown");
+          dropdown.style.cursor = "pointer";
+
+          let hiddenRolesDiv = document.createElement("div");
+          hiddenRolesDiv.classList.add("hidden-roles");
+          hiddenRolesDiv.innerHTML = bestRoles.slice(1).map(role => {
+            let roleName = roleNames[role.id] || "Unknown Role";
+            return `${roleName}: ${role.total}`;
+          }).join("<br>");
+
+          dropdown.addEventListener("click", function() {
+            hiddenRolesDiv.style.display = hiddenRolesDiv.style.display === "none" ? "block" : "none";
           });
 
-          playerInfo += "</ul>";
-          resultDiv.innerHTML += playerInfo;
+          rolesTd.appendChild(roleSpan)
+          rolesTd.appendChild(dropdown)
+          rolesTd.appendChild(hiddenRolesDiv)
+          row.appendChild(rolesTd);
+
+          tbody.appendChild(row);
         });
+
+        table.appendChild(tbody);
+        resultDiv.appendChild(table);
       }
     </script>
   </body>
